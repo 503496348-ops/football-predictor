@@ -132,3 +132,15 @@ Predictions are output as structured text:
 - [ ] 2. 加载相关代码和配置
 - [ ] 3. 执行核心功能
 - [ ] 4. 验证输出结果
+
+
+---
+
+## 技术架构
+
+- **xG模型**: 基于极坐标特征（距离+角度）的Expected Goals估算
+- **特征工程**: 27维滚动特征（进攻/防守/状态/xG），参考socceraction VAEP框架
+- **数据管线**: football-data.co.uk采集→清洗→标准化→特征提取→预测
+- **模型集成**: Random Forest + XGBoost + Logistic Regression投票
+- **球场网格**: 16×12网格的Expected Threat (xT)空间模型
+- **API接口**: Python SDK + CLI工具
