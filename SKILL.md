@@ -1,6 +1,6 @@
 ---
 name: football-predictor
-description: "Football match outcome predictor using ML ensemble. Downloads data from football-data.co.uk, computes 27-dim rolling team features, trains RF+XGBoost+LR ensemble, predicts match results (H/D/A) and Over/Under 2.5 goals."
+description: "ML足球比赛预测系统。RF+XGBoost+LR集成模型，27维特征，17联赛支持，胜平负+大小球预测。当需要预测足球比赛结果、分析球队数据、查看联赛排名时使用。"
 version: 1.0.0
 triggers:
   - 足球预测
