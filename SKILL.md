@@ -1,7 +1,7 @@
 ---
 name: football-predictor
 description: "ML足球比赛预测系统。RF+XGBoost+LR集成模型，27维特征，17联赛支持，胜平负+大小球预测。当需要预测足球比赛结果、分析球队数据、查看联赛排名时使用。"
-version: 1.0.0
+version: 1.1.0
 triggers:
   - 足球预测
   - 比赛预测
