@@ -2,6 +2,13 @@
 name: football-predictor
 description: "Football match outcome predictor using ML ensemble. Downloads data from football-data.co.uk, computes 27-dim rolling team features, trains RF+XGBoost+LR ensemble, predicts match results (H/D/A) and Over/Under 2.5 goals."
 version: 1.0.0
+triggers:
+  - 足球预测
+  - 比赛预测
+  - football predict
+  - match prediction
+  - 足球分析
+  - 此地无垠
 author: Hermes Agent
 license: MIT
 dependencies: [pandas, scikit-learn, xgboost, requests, numpy]
