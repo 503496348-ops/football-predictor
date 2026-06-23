@@ -42,7 +42,7 @@
 40|| **Validation** | Stratified K-Fold cross-validation |
 41|| **Leagues** | EPL, La Liga, Bundesliga, Serie A, Ligue 1, + 15 more |
 42|
-43|## Quick Start
+43|## 快速开始
 44|
 45|```bash
 46|# 1. Install dependencies
