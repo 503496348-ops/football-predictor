@@ -144,3 +144,8 @@ Predictions are output as structured text:
 - **模型集成**: Random Forest + XGBoost + Logistic Regression投票
 - **球场网格**: 16×12网格的Expected Threat (xT)空间模型
 - **API接口**: Python SDK + CLI工具
+
+## 2026-07-03 产品收敛门禁
+
+- 新增 `scripts/product_convergence_gate.py`：从远端干净 clone 后可运行 `python3 scripts/product_convergence_gate.py --json`，检查 SKILL/README、入口文件、smoke 目标、测试与外部融合引用是否自洽。
+- 新增 `tests/test_product_convergence_gate.py`：确保门禁在产品仓库中真实可执行，避免后续增强只停留在孤岛模块。
