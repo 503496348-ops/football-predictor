@@ -4,6 +4,16 @@ All notable changes to `football-predictor` should be documented in this file.
 
 This repository follows a lightweight Keep-a-Changelog style and semantic versioning where applicable.
 
+## [3.0.0] — 2026-07-04
+
+### Added — Monte Carlo Simulation Layer (probability fixation fix)
+- **`monte_carlo.py`**: Poisson-based Monte Carlo match simulation with lambda uncertainty. Samples λ from Gamma distribution (CV=15%), runs 10k Poisson simulations per match, outputs variable probabilities + top-10 score distributions + 95% CI on goal difference. Dixon-Coles tau adjustment for low-scoring draws. Uses numpy random — no scipy dependency for simulation.
+- **Analytic score grid**: penaltyblog-style Dixon-Coles probability matrix (scipy.stats.poisson). Exact Poisson PMF + DC tau → full score grid → 1X2 probabilities. Used as baseline comparison.
+- **`predict_match` enhancement**: Now returns expectedGoals (from xG features), monteCarlo simulation results, and analyticGrid alongside ML ensemble probabilities.
+
+### Fixed
+- **Probability fixation**: Monte Carlo layer produces naturally varying probabilities on each run (Poisson sampling randomness), while ML ensemble stays fixed as reference. Same matchup, different runs → slightly different MC probabilities.
+
 ## [2.0.0] — 2026-07-04
 
 ### Added — xG Features + Bayesian Calibration Fusion

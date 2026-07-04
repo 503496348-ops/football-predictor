@@ -486,7 +486,9 @@ def train_model(match_df: pd.DataFrame, target: str = "result"):
 
 def predict_match(model_info: dict, home_team: str, away_team: str,
                   home_stats: dict, away_stats: dict) -> dict:
-    """Predict a single match outcome."""
+    """Predict a single match outcome with Monte Carlo uncertainty layer."""
+    from monte_carlo import monte_carlo_simulate, analytic_score_grid
+
     features = model_info["features"]
     scaler = model_info["scaler"]
     model = model_info["model"]
@@ -507,9 +509,22 @@ def predict_match(model_info: dict, home_team: str, away_team: str,
     x = np.array(x).reshape(1, -1)
     x_scaled = scaler.transform(x)
 
-    # Get probabilities
+    # Get ML probabilities
     probs = model.predict_proba(x_scaled)[0]
     pred_idx = np.argmax(probs)
+
+    # Estimate expected goals for Monte Carlo
+    # Use xG features if available, otherwise derive from team stats
+    lambda_home = home_stats.get("h_xg_for", home_stats.get("h_gf", 1.3))
+    lambda_away = away_stats.get("a_xg_for", away_stats.get("a_gf", 1.1))
+
+    # Ensure positive
+    lambda_home = max(0.3, float(lambda_home))
+    lambda_away = max(0.3, float(lambda_away))
+
+    # Monte Carlo simulation (10k sims, Poisson + lambda uncertainty)
+    mc = monte_carlo_simulate(lambda_home, lambda_away, rho=-0.13, n_sim=10000, lambda_uncertainty=0.15)
+    analytic = analytic_score_grid(lambda_home, lambda_away, rho=-0.13)
 
     return {
         "home_team": home_team,
@@ -517,6 +532,9 @@ def predict_match(model_info: dict, home_team: str, away_team: str,
         "prediction": labels[pred_idx],
         "probabilities": {label: float(prob) for label, prob in zip(labels, probs)},
         "confidence": float(probs[pred_idx]),
+        "expectedGoals": {"home": round(lambda_home, 2), "away": round(lambda_away, 2)},
+        "monteCarlo": mc,
+        "analyticGrid": analytic,
     }
 
 
