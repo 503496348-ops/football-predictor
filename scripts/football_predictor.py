@@ -31,6 +31,13 @@ from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore")
 
+# ── xG Enhancement (P2: Bayesian calibration) ──────────────────────────────
+try:
+    from bayesian_xg import estimate_match_xg, BayesianXGCalibrator
+    HAS_XG = True
+except ImportError:
+    HAS_XG = False
+
 # ─── League Config ───────────────────────────────────────────────────────────
 
 LEAGUES = {
@@ -246,7 +253,59 @@ def compute_team_stats(df: pd.DataFrame, window: int = 10) -> pd.DataFrame:
             "avg_odds_a": row.get("AvgH", np.nan),
         })
 
-    team_df = pd.DataFrame(records).sort_values("date").reset_index(drop=True)
+    # xG estimation from shots (if HS/AS/HST/AST available)
+    if "HS" in df.columns and "HST" in df.columns:
+        SOT_CONV, SHOT_CONV = 0.32, 0.03
+        for _, row in df.iterrows():
+            hs = float(row.get("HS", 0) or 0)
+            hst = float(row.get("HST", 0) or 0)
+            as_ = float(row.get("AS", 0) or 0)
+            ast = float(row.get("AST", 0) or 0)
+            xg_home = hst * SOT_CONV + max(0, hs - hst) * SHOT_CONV
+            xg_away = ast * SOT_CONV + max(0, as_ - ast) * SHOT_CONV
+            # Find matching records in the records list and add xg
+            for r in records:
+                if r["date"] == row["Date"]:
+                    if r["is_home"] == 1 and r["team"] == row["HomeTeam"]:
+                        r["xg_for"] = xg_home
+                        r["xg_against"] = xg_away
+                    elif r["is_home"] == 0 and r["team"] == row["AwayTeam"]:
+                        r["xg_for"] = xg_away
+                        r["xg_against"] = xg_home
+
+        team_df = pd.DataFrame(records).sort_values("date").reset_index(drop=True)
+
+        # Rolling xG features
+        if "xg_for" in team_df.columns:
+            team_df["xg_diff"] = team_df["xg_for"] - team_df["xg_against"]
+            for col, prefix in [("xg_for", "xg_for"), ("xg_against", "xg_against"),
+                                ("xg_diff", "xg_diff")]:
+                h_mask = team_df["is_home"] == 1
+                team_df.loc[h_mask, f"h_{prefix}"] = (
+                    team_df.loc[h_mask].groupby("team")[col].transform(
+                        lambda x: x.shift(1).rolling(window, min_periods=3).mean()
+                    )
+                )
+                team_df.loc[~h_mask, f"a_{prefix}"] = (
+                    team_df.loc[~h_mask].groupby("team")[col].transform(
+                        lambda x: x.shift(1).rolling(window, min_periods=3).mean()
+                    )
+                )
+            # xG efficiency: actual goals / xG (rolling)
+            team_df["xg_eff"] = team_df["goals_for"] / team_df["xg_for"].clip(lower=0.01)
+            h_mask = team_df["is_home"] == 1
+            team_df.loc[h_mask, "h_xg_eff"] = (
+                team_df.loc[h_mask].groupby("team")["xg_eff"].transform(
+                    lambda x: x.shift(1).rolling(window, min_periods=3).mean()
+                )
+            )
+            team_df.loc[~h_mask, "a_xg_eff"] = (
+                team_df.loc[~h_mask].groupby("team")["xg_eff"].transform(
+                    lambda x: x.shift(1).rolling(window, min_periods=3).mean()
+                )
+            )
+    else:
+        team_df = pd.DataFrame(records).sort_values("date").reset_index(drop=True)
 
     # Compute rolling features per team
     team_df["win"] = (team_df["result"] == "H").astype(int)
@@ -304,18 +363,20 @@ def compute_team_stats(df: pd.DataFrame, window: int = 10) -> pd.DataFrame:
 def build_match_features(df: pd.DataFrame, team_df: pd.DataFrame) -> pd.DataFrame:
     """Merge home and away team stats into match-level features."""
     # Home team stats
-    home_stats = team_df[team_df["is_home"] == 1][
-        ["team", "date", "h_wins", "h_losses", "h_draws", "h_gf", "h_ga", "h_gd",
-         "h_win_rate", "h_loss_rate", "h_over25_count"] +
-        ([ "h_shots_on_target", "h_corners"] if "h_shots_on_target" in team_df.columns else [])
-    ].rename(columns={"team": "HomeTeam", "date": "Date"})
+    home_cols = ["team", "date", "h_wins", "h_losses", "h_draws", "h_gf", "h_ga", "h_gd",
+                 "h_win_rate", "h_loss_rate", "h_over25_count"]
+    for opt in ["h_shots_on_target", "h_corners", "h_xg_for", "h_xg_against", "h_xg_diff", "h_xg_eff"]:
+        if opt in team_df.columns:
+            home_cols.append(opt)
+    home_stats = team_df[team_df["is_home"] == 1][home_cols].rename(columns={"team": "HomeTeam", "date": "Date"})
 
     # Away team stats
-    away_stats = team_df[team_df["is_home"] == 0][
-        ["team", "date", "a_wins", "a_losses", "a_draws", "a_gf", "a_ga", "a_gd",
-         "a_win_rate", "a_loss_rate", "a_over25_count"] +
-        (["a_shots_on_target", "a_corners"] if "a_shots_on_target" in team_df.columns else [])
-    ].rename(columns={"team": "AwayTeam", "date": "Date"})
+    away_cols = ["team", "date", "a_wins", "a_losses", "a_draws", "a_gf", "a_ga", "a_gd",
+                 "a_win_rate", "a_loss_rate", "a_over25_count"]
+    for opt in ["a_shots_on_target", "a_corners", "a_xg_for", "a_xg_against", "a_xg_diff", "a_xg_eff"]:
+        if opt in team_df.columns:
+            away_cols.append(opt)
+    away_stats = team_df[team_df["is_home"] == 0][away_cols].rename(columns={"team": "AwayTeam", "date": "Date"})
 
     # Merge with original match data
     merged = df.merge(home_stats, on=["HomeTeam", "Date"], how="left")
@@ -342,6 +403,9 @@ FEATURE_COLS = [
 OPTIONAL_FEATURES = [
     "h_shots_on_target", "h_corners", "a_shots_on_target", "a_corners",
     "odds_home", "odds_draw", "odds_away",
+    # xG features (P2: Bayesian xG enhancement)
+    "h_xg_for", "h_xg_against", "h_xg_diff", "h_xg_eff",
+    "a_xg_for", "a_xg_against", "a_xg_diff", "a_xg_eff",
 ]
 
 TARGET_MAP = {"H": 0, "D": 1, "A": 2}
@@ -497,7 +561,7 @@ def run_pipeline(league_code: str, predict_matches: list = None,
         print(f"  ✓ 下载完成 {len(df)} 场比赛")
 
     # Step 2: Feature engineering
-    print("\n🔧 计算27维滚动特征 (窗口=10)...")
+    print("\n🔧 计算27维滚动特征 + xG贝叶斯校准 (窗口=10)...")
     team_df = compute_team_stats(df, window=10)
     match_df = build_match_features(df, team_df)
     print(f"  ✓ Features computed for {len(match_df)} matches")
