@@ -117,3 +117,60 @@ class DataPipeline:
         data = json.loads(json_str)
         events = [MatchEvent(**e) for e in data.pop('events', [])]
         return MatchData(events=events, **data)
+
+    def from_statsbomb_events(
+        self,
+        match_id: str,
+        home_team: str,
+        away_team: str,
+        raw_events: List[dict],
+        *,
+        competition: str = "",
+        date: str = "",
+    ) -> MatchData:
+        """Normalize StatsBomb Open Data events into the product's MatchData schema.
+
+        StatsBomb coordinates use a 120×80 pitch; this adapter deliberately
+        preserves that native scale so downstream feature engineering can decide
+        when to convert to the 105×68 metric representation.
+        """
+        events: List[MatchEvent] = []
+        home_goals = away_goals = 0
+        for position, raw in enumerate(raw_events):
+            event_type = str((raw.get("type") or {}).get("name") or "unknown").lower()
+            shot = raw.get("shot") or {}
+            outcome = str((shot.get("outcome") or {}).get("name") or "success").lower()
+            if event_type == "shot" and outcome == "goal":
+                team_name = str((raw.get("team") or {}).get("name") or "")
+                if team_name == home_team:
+                    home_goals += 1
+                elif team_name == away_team:
+                    away_goals += 1
+            location = raw.get("location") or [0.0, 0.0]
+            end_location = shot.get("end_location") or (raw.get("pass") or {}).get("end_location") or location
+            team = raw.get("team") or {}
+            player = raw.get("player") or {}
+            events.append(MatchEvent(
+                match_id=match_id,
+                event_id=int(raw.get("index", position)),
+                period=int(raw.get("period", 1)),
+                time_seconds=float(raw.get("minute", 0)) * 60 + float(raw.get("second", 0)),
+                team_id=str(team.get("name") or team.get("id") or ""),
+                player_id=str(player.get("id") or player.get("name") or ""),
+                event_type=event_type,
+                result="goal" if event_type == "shot" and outcome == "goal" else outcome,
+                start_x=float(location[0]) if location else 0.0,
+                start_y=float(location[1]) if len(location) > 1 else 0.0,
+                end_x=float(end_location[0]) if end_location else 0.0,
+                end_y=float(end_location[1]) if len(end_location) > 1 else 0.0,
+            ))
+        return MatchData(
+            match_id=match_id,
+            home_team=home_team,
+            away_team=away_team,
+            competition=competition,
+            date=date,
+            home_goals=home_goals,
+            away_goals=away_goals,
+            events=events,
+        )
