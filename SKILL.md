@@ -15,6 +15,15 @@ triggers:
 
 ## 核心能力
 
+## 快速开始
+
+```bash
+python3 scripts/cli.py predict brazil argentina
+python3 scripts/cli.py leagues
+node scripts/predict.mjs brazil argentina
+```
+
+
 | 命令 | 说明 |
 |------|------|
 | `football-predictor predict <home> <away>` | 预测比赛结果 |
