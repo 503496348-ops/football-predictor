@@ -49,18 +49,19 @@ metadata:
 pip install pandas scikit-learn xgboost requests numpy
 
 # 2. Run prediction for a league (full pipeline: download → train → predict)
-python3 ~/.hermes/skills/football-predictor/scripts/football_predictor.py --league EPL
+# 在仓库根目录执行（或把 scripts/ 换成实际 skill 安装路径）
+python3 scripts/football_predictor.py --league EPL
 
 # 3. Predict specific matches
-python3 ~/.hermes/skills/football-predictor/scripts/football_predictor.py --league EPL \
+python3 scripts/football_predictor.py --league EPL \
   --predict "阿森纳 vs 切尔西" "利物浦 vs 曼城"
 
 # 4. List available leagues
+python3 scripts/football_predictor.py --list-leagues
 
 # 5. 预测 + 自动推送飞书卡片
-python3 ~/.hermes/skills/football-predictor/scripts/football_predictor.py --league EPL \
+python3 scripts/football_predictor.py --league EPL \
   --predict "阿森纳 vs 切尔西" --feishu-card --feishu-chat <chat_id>
-python3 ~/.hermes/skills/football-predictor/scripts/football_predictor.py --list-leagues
 ```
 
 ## Supported Leagues
