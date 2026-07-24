@@ -5,15 +5,17 @@ license: MIT
 metadata:
   author: 503496348-ops
   version: 1.0.0
-triggers:
-  - "足球预测"
-  - "比赛预测"
-  - "football"
-  - "Elo"
-  - "蒙特卡洛"
 ---
 
 # Football Predictor — 此地无垠足球预测
+
+## 触发条件
+
+- "足球预测"
+- "比赛预测"
+- "football"
+- "Elo"
+- "蒙特卡洛"
 
 多模型融合的足球比赛结果预测：Elo+Dixon-Coles + 蒙特卡洛模拟 + 贝叶斯 xG。
 
