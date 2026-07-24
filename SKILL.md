@@ -1,6 +1,10 @@
 ---
 name: football-predictor
 description: "此地无垠足球预测 — Elo+DC 模型、蒙特卡洛模拟、贝叶斯 xG"
+license: MIT
+metadata:
+  author: 503496348-ops
+  version: 1.0.0
 triggers:
   - "足球预测"
   - "比赛预测"
