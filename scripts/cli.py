@@ -3,7 +3,7 @@
 import argparse, json, sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-def cmd_predict(args):
+def cmd_predict(args) -> None:
     """Predict match outcome."""
     try:
         from scripts.football_predictor import predict_match
@@ -21,7 +21,7 @@ def cmd_predict(args):
         else:
             print(json.dumps({"error": "no predictor available"}, ensure_ascii=False))
 
-def cmd_leagues(args):
+def cmd_leagues(args) -> None:
     """List supported leagues."""
     try:
         from scripts.football_predictor import list_leagues
@@ -36,7 +36,7 @@ def cmd_leagues(args):
         else:
             print("  premier-league, la-liga, serie-a, bundesliga, ligue-1")
 
-def cmd_info(args):
+def cmd_info(args) -> None:
     """Show product info."""
     print(json.dumps({
         "product": "此地无垠 Football Predictor",
@@ -45,7 +45,7 @@ def cmd_info(args):
         "status": "ok"
     }, ensure_ascii=False, indent=2))
 
-def main():
+def main() -> None:
     p = argparse.ArgumentParser(description='Football Predictor 足球预测工具')
     sub = p.add_subparsers(dest='command')
 
